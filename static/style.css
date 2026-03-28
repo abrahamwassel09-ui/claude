@@ -1,0 +1,142 @@
+/* ── Reset & Base ──────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: #0f1117;
+    color: #e0e0e0;
+    min-height: 100vh;
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+header {
+    background: #1a1d28;
+    padding: 1.2rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #2d3148;
+}
+
+header h1 {
+    font-size: 1.4rem;
+    color: #a78bfa;
+}
+
+nav a {
+    color: #9ca3af;
+    text-decoration: none;
+    margin-left: 1.5rem;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+nav a:hover, nav a.active {
+    color: #a78bfa;
+}
+
+/* ── Main ─────────────────────────────────────────────────── */
+main {
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+/* ── Model Sections ───────────────────────────────────────── */
+.model-section {
+    margin-bottom: 2.5rem;
+}
+
+.model-section h2 {
+    font-size: 1.2rem;
+    margin-bottom: 0.8rem;
+    color: #c4b5fd;
+    border-left: 4px solid #a78bfa;
+    padding-left: 0.6rem;
+}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1a1d28;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+th {
+    background: #252836;
+    text-align: left;
+    padding: 0.65rem 1rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+td {
+    padding: 0.6rem 1rem;
+    border-top: 1px solid #2d3148;
+    font-size: 0.9rem;
+}
+
+.day-cell {
+    font-weight: 700;
+    color: #a78bfa;
+    vertical-align: top;
+}
+
+/* ── Status Select ────────────────────────────────────────── */
+.status-select {
+    background: #252836;
+    color: #e0e0e0;
+    border: 1px solid #3f4460;
+    border-radius: 4px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    width: 100%;
+}
+
+.status-select:focus {
+    outline: none;
+    border-color: #a78bfa;
+}
+
+/* ── Row color coding by status ───────────────────────────── */
+tr.status-not-started td { }
+tr.status-written td     { border-left: 3px solid #fbbf24; }
+tr.status-approved td    { border-left: 3px solid #60a5fa; }
+tr.status-scheduled td   { border-left: 3px solid #a78bfa; }
+tr.status-posted td      { border-left: 3px solid #34d399; }
+
+/* ── Badges ───────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.badge-yes {
+    background: #065f46;
+    color: #6ee7b7;
+}
+
+.badge-no {
+    background: #3b1c1c;
+    color: #f87171;
+}
+
+/* ── Image cell ───────────────────────────────────────────── */
+.img-cell {
+    text-align: center;
+}
+
+/* ── Log Table ────────────────────────────────────────────── */
+.log-table td {
+    font-family: "Cascadia Code", "Consolas", monospace;
+    font-size: 0.82rem;
+}

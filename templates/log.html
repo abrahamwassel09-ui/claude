@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Log — Content Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>File Processing Log</h1>
+        <nav>
+            <a href="{{ url_for('index') }}">Dashboard</a>
+            <a href="{{ url_for('file_log') }}" class="active">File Log</a>
+        </nav>
+    </header>
+
+    <main>
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Original File</th>
+                    <th>New Name</th>
+                    <th>Model</th>
+                    <th>Confidence</th>
+                    <th>Day</th>
+                    <th>Post</th>
+                    <th>Frame</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for e in entries %}
+                <tr>
+                    <td>{{ e.timestamp }}</td>
+                    <td>{{ e.original_name }}</td>
+                    <td>{{ e.new_name }}</td>
+                    <td>{{ e.model }}</td>
+                    <td>{{ "%.2f" | format(e.confidence) }}</td>
+                    <td>{{ e.day }}</td>
+                    <td>{{ e.post }}</td>
+                    <td>{{ e.frame }}</td>
+                </tr>
+            {% endfor %}
+            {% if not entries %}
+                <tr><td colspan="8" style="text-align:center; color:#888;">No files processed yet.</td></tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>

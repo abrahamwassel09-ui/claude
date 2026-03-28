@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Tracker Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Content Tracker Dashboard</h1>
+        <nav>
+            <a href="{{ url_for('index') }}" class="active">Dashboard</a>
+            <a href="{{ url_for('file_log') }}">File Log</a>
+        </nav>
+    </header>
+
+    <main>
+    {% for model_key, model_info in models.items() %}
+        <section class="model-section">
+            <h2>{{ model_info.full_name }}</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Post</th>
+                        <th>Status</th>
+                        <th>Images</th>
+                        <th># Files</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for day in days %}
+                    {% for post in grid[model_key][day] %}
+                    <tr class="status-{{ post.status | lower | replace(' ', '-') }}">
+                        {% if loop.first %}
+                        <td class="day-cell" rowspan="{{ grid[model_key][day] | length }}">{{ day }}</td>
+                        {% endif %}
+                        <td>{{ post.post }}</td>
+                        <td>
+                            <select
+                                class="status-select"
+                                data-post-id="{{ post.id }}"
+                                onchange="updateStatus(this)"
+                            >
+                                {% for s in statuses %}
+                                <option value="{{ s }}" {{ 'selected' if s == post.status else '' }}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td class="img-cell">
+                            {% if post.has_images %}
+                                <span class="badge badge-yes">Yes</span>
+                            {% else %}
+                                <span class="badge badge-no">No</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ post.image_count }}</td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    {% endfor %}
+    </main>
+
+    <script>
+        async function updateStatus(selectEl) {
+            const postId = selectEl.dataset.postId;
+            const status = selectEl.value;
+            const row = selectEl.closest('tr');
+
+            try {
+                const resp = await fetch('/api/update_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ post_id: parseInt(postId), status: status })
+                });
+                if (resp.ok) {
+                    // Update row class for color coding
+                    row.className = 'status-' + status.toLowerCase().replace(/ /g, '-');
+                }
+            } catch (err) {
+                console.error('Failed to update status:', err);
+            }
+        }
+
+        // Auto-refresh every 30 seconds to pick up new image sorts
+        setTimeout(() => location.reload(), 30000);
+    </script>
+</body>
+</html>
