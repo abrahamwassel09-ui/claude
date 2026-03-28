@@ -1,18 +1,16 @@
 """
-SYSTEM 1 — AI-Powered File Organizer
-Watches C:\\Higgsfield_Exports for new images, identifies the model via
-Claude Vision API, renames, and sorts them into the content folder tree.
+SYSTEM 1 — File Organizer
+Watches C:\\Higgsfield_Exports for new images, prompts you for the model
+and day/post, then renames and sorts them into the content folder tree.
 """
 
 import os
 import sys
 import time
 import shutil
-import base64
 import logging
 from pathlib import Path
 
-import anthropic
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -36,102 +34,33 @@ logging.basicConfig(
 )
 log = logging.getLogger("organizer")
 
-# ── Claude client ────────────────────────────────────────────────────────
-client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+# Build a lookup for the model selection prompt
+MODEL_KEYS = list(MODELS.keys())
 
 
-def encode_image(path: str) -> tuple[str, str]:
-    """Read an image file and return (base64_data, media_type)."""
-    ext = Path(path).suffix.lower()
-    media_map = {
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".webp": "image/webp",
-        ".gif": "image/gif",
-        ".bmp": "image/bmp",
-    }
-    media_type = media_map.get(ext, "image/jpeg")
-    with open(path, "rb") as f:
-        data = base64.standard_b64encode(f.read()).decode("utf-8")
-    return data, media_type
-
-
-def identify_model(image_path: str) -> tuple[str, float]:
-    """
-    Send an image to Claude Vision and ask which model is in the photo.
-    Returns (model_key, confidence) e.g. ("Savannah", 0.95).
-    """
-    img_data, media_type = encode_image(image_path)
-
-    model_descriptions = "\n".join(
-        f"- {v['description']}" for v in MODELS.values()
+def ask_model() -> str:
+    """Prompt the operator to pick which model this batch is for."""
+    print("\n" + "=" * 60)
+    options = " / ".join(
+        f"{i + 1} for {MODELS[k]['full_name']}" for i, k in enumerate(MODEL_KEYS)
     )
-    model_keys = ", ".join(MODELS.keys())
+    raw = input(f"Which model? ({options}): ").strip()
+    print("=" * 60)
 
-    prompt = f"""You are an image analyst for a content team. Look at this photo
-and determine which model is pictured.
+    # Accept a number or a name
+    for i, key in enumerate(MODEL_KEYS):
+        if raw == str(i + 1) or raw.lower() == key.lower():
+            return key
 
-Here are the two possible models:
-{model_descriptions}
-
-Respond with EXACTLY two lines and nothing else:
-MODEL: <one of: {model_keys}>
-CONFIDENCE: <a number from 0.0 to 1.0>
-
-If you truly cannot tell, respond:
-MODEL: Unknown
-CONFIDENCE: 0.0
-"""
-
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=100,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": img_data,
-                        },
-                    },
-                    {"type": "text", "text": prompt},
-                ],
-            }
-        ],
-    )
-
-    text = response.content[0].text.strip()
-    model_key = "Unknown"
-    confidence = 0.0
-
-    for line in text.splitlines():
-        line = line.strip()
-        if line.upper().startswith("MODEL:"):
-            raw = line.split(":", 1)[1].strip()
-            # Match against known keys (case-insensitive)
-            for key in MODELS:
-                if key.lower() == raw.lower():
-                    model_key = key
-                    break
-        elif line.upper().startswith("CONFIDENCE:"):
-            try:
-                confidence = float(line.split(":", 1)[1].strip())
-            except ValueError:
-                pass
-
-    return model_key, confidence
+    # Default to first model if input is unrecognized
+    print(f"  Unrecognized input '{raw}', defaulting to {MODEL_KEYS[0]}.")
+    return MODEL_KEYS[0]
 
 
 def ask_batch_info() -> tuple[str, str]:
     """Prompt the operator for the day and post number."""
-    print("\n" + "=" * 60)
     raw = input(
-        "Which day and post number is this batch? (e.g. Thursday Post 2): "
+        "Which day and post number? (e.g. Thursday Post 2): "
     ).strip()
     print("=" * 60 + "\n")
 
@@ -150,21 +79,11 @@ def ask_batch_info() -> tuple[str, str]:
     return day, post_label
 
 
-def process_batch(image_paths: list[str], day: str, post: str):
-    """Identify, rename, and sort a batch of images."""
+def process_batch(image_paths: list[str], model_key: str, day: str, post: str):
+    """Rename and sort a batch of images."""
     for frame_num, src_path in enumerate(sorted(image_paths), start=1):
         original_name = os.path.basename(src_path)
         ext = Path(src_path).suffix.lower()
-
-        log.info(f"Analyzing {original_name} ...")
-        model_key, confidence = identify_model(src_path)
-
-        if model_key == "Unknown":
-            log.warning(
-                f"  Could not identify model in {original_name} "
-                f"(confidence {confidence:.2f}). Skipping."
-            )
-            continue
 
         # Build new filename: Savannah_Thursday_Post2_Frame1.jpg
         new_name = f"{model_key}_{day}_{post}_Frame{frame_num}{ext}"
@@ -175,17 +94,14 @@ def process_batch(image_paths: list[str], day: str, post: str):
         dest_path = os.path.join(dest_folder, new_name)
 
         shutil.copy2(src_path, dest_path)
-        log.info(
-            f"  -> {new_name}  (model={model_key}, conf={confidence:.2f})  "
-            f"-> {dest_folder}"
-        )
+        log.info(f"  {original_name}  ->  {new_name}  ->  {dest_folder}")
 
         # Log to database (also updates tracker dashboard)
         log_file(
             original_name=original_name,
             new_name=new_name,
             model=model_key,
-            confidence=confidence,
+            confidence=1.0,
             day=day,
             post=post,
             frame=frame_num,
@@ -229,9 +145,10 @@ class NewImageHandler(FileSystemEventHandler):
         log.info(f"New batch detected: {len(batch)} image(s)")
         log.info(f"{'='*60}")
 
+        model_key = ask_model()
         day, post = ask_batch_info()
-        log.info(f"Processing as {day} / {post}")
-        process_batch(batch, day, post)
+        log.info(f"Processing as {model_key} / {day} / {post}")
+        process_batch(batch, model_key, day, post)
 
 
 def run_watcher():
@@ -274,8 +191,9 @@ def run_manual():
         return
 
     print(f"Found {len(images)} image(s) in {WATCH_FOLDER}")
+    model_key = ask_model()
     day, post = ask_batch_info()
-    process_batch(images, day, post)
+    process_batch(images, model_key, day, post)
 
 
 if __name__ == "__main__":
